@@ -1,0 +1,16 @@
+Package: FunD
+Type: Package
+Title: What the Package Does in One 'Title Case' Line
+Version: 1.0.0
+Date: 2020-03-24
+Author: Your Name
+Maintainer: Your Name <your@email.com>
+Depends: R (>= 2.10)
+Description: Currently only provide iNEXTFD 
+License: GPL (>= 2)
+Imports: Rcpp,
+         dplyr,
+         ggplot2,
+         stats
+LinkingTo: Rcpp
+RoxygenNote: 6.1.1
