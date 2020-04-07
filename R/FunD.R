@@ -93,7 +93,7 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
     dmin <- min(distM[distM>0])
     #dmax <- max(distM)
     threshold <- (dmean+dmin)/2
-  }else if(threshold<=0) {
+  }else if(sum(threshold<0)>0|sum(threshold>1)>0) {
     stop("Threshold must be a number between 0 and 1. Use NULL to set it to (dmean+dmin)/2.",call. = FALSE)
   }
   

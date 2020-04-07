@@ -16,7 +16,7 @@ FD_mle <- function(ai_vi, q){
   V_bar <- sum(ai_vi$ai[,1]*ai_vi$vi[,1])
   n <- round(V_bar)
   out <- sapply(1:ncol(ai_vi$ai), function(i){
-    a <- ai_vi$ai[,i];v = ai_vi$vi[,i]
+    a <- ceiling(ai_vi$ai[,i]);v = ai_vi$vi[,i]
     sapply(q,function(qq){
       if(qq==1){
         exp(sum(-v*a/n*log(a/n)))
