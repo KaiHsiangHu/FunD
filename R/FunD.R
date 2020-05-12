@@ -59,22 +59,24 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
     nT <- data[1,]
     data <- data[-1,]
   }
-  
+  data <- data[rowSums(data)>0,,drop=FALSE]
+  distM <- distM[rowSums(data)>0,rowSums(data)>0]
   if(nrow(data)!=nrow(distM))
     stop("The number of species in data should equal to that in distance matrix", call. = FALSE)
   if(is.null(rownames(data))|is.null(rownames(distM))){
     warning('The species names are not provided in data or distance matrix.', call. = FALSE)
+    rownames(data) <- rownames(distM) <- colnames(distM) <-  paste0('sp',1:nrow(data))
   }else{
     if(sum(rownames(data) %in% rownames(distM))!=nrow(distM))
       stop("Data and distance matrix contain unmatched species", call. = FALSE)
   }
-  data <- data[rowSums(data)>0,,drop=FALSE]
   order_sp <- match(rownames(data),rownames(distM))
   distM <- distM[order_sp,order_sp]
 
   if(datatype=='incidence_freq'){
     data <- rbind(nT,data)
   }
+  
   name_sp <- rownames(data)
   dat <- lapply(1:ncol(data), function(k)  {x <- data[,k];names(x) <- name_sp;x})
   if(is.null(colnames(data))) {
@@ -173,6 +175,126 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
   ans
   
 }
+
+#' Compute functional diversity with particular sample coverages
+#'
+#'\code{EstimateFD}: computes functional diversity(FD) with particular user-specified levels of sample coverages.
+#' See Chao et al. (2019) for pertinent background and methods.
+#' @param data a matrix/data.frame of species abundances/incidences data.\cr
+#' See \code{\link{iNEXTFD}} for data details.
+#' @param distM a pair wise distance matrix for all pairs of observed species in the pooled assemblage.\cr
+#' @param datatype data type of input data: individual-based abundance data (\code{datatype = "abundance"}),
+#' or species by sampling-units incidence frequencies (\code{datatype = "incidence_freq"}), default is \code{"abundance"}. \cr
+#' @param q a sequence of nonnegative integers specifying the diversity orders of FD. Default is \code{c(0,1,2)}. \cr
+#' @param level a positive sequence < 1 specifying a particular values of sample coverages.
+#' If \code{NULL},then \code{level} will be chosen as the minimum coverage of all sites after extrapolating each site to its double sample size. Default is \code{NULL}.
+#' @param conf a positive number < 1 specifying the level of confidence interval, default is 0.95. \cr
+#' @param nboot a positive integer specifying the number of bootstrap replications. Enter 0 to skip bootstrap;
+#' in this case, the caculation of standard errors and confidence intervals will be skipped. Default is 50.
+#' @param threshold a positive sequence between 0 and 1 specifying tau. If \code{NULL}, \code{threshold = } dmean. Default is \code{NULL}.
+#' @import ggplot2
+#' @import dplyr
+#' @importFrom stats rmultinom
+#' @importFrom stats qnorm
+#' @importFrom stats sd
+#' @return a table including the sample size, sample coverage,
+#' method (Interpolated or Extrapolated), and diversity estimates with each \code{q} for the user-specified sample coverages. \cr\cr
+#' @examples
+#' \donttest{
+#' # Type (1) abundance data (treat incidence frequencies as abundances to save computation time.)
+#' data(FunDdata.inc)
+#' data <- FunDdata.inc$data[-1,]
+#' dij <-  FunDdata.inc$dij
+#' out <- EstimateFD(data = data, distM = dij,datatype = "abundance")
+#' }
+#' @references
+#' Chao, A., Chiu C.-H. and Jost, L. (2010). functional diversity measures based on Hill numbers. Philosophical Transactions of the Royal Society B., 365, 3599-3609.\cr\cr
+#' Chao, A., Chiu, C.-H., Hsieh, T. C., Davis, T., Nipperess, D., and Faith, D. (2015) Rarefaction and extrapolation of functional diversity. Methods in Ecology and Evolution, 6, 380-388.\cr\cr
+#' Hsieh, T. C. and Chao, A. (2017). Rarefaction and extrapolation: making fair comparison of abundance-sensitive functional diversity among multiple assemblages. Systematic Biology 66, 100-111.
+#' @export
+EstimateFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), level = NULL, nboot = 50,conf = 0.95,threshold = NULL){
+  
+  DATATYPE <- c("abundance", "incidence_freq")
+  if(is.na(pmatch(datatype, DATATYPE)) == T)
+    stop("invalid datatype", call. = FALSE)
+  if(class(q) != "numeric")
+    stop("invlid class of order q, q should be a nonnegative integer value", call. = FALSE)
+  
+  if ((conf < 0) | (conf > 1) | (is.numeric(conf)==F)) stop('conf (confidence level) must be a numerical value between 0 and 1, We use "conf" = 0.95 to calculate!', call. = FALSE)
+  if ((nboot < 0) | (is.numeric(nboot)==F)) stop('nboot must be a nonnegative integer, We use "nboot" = 50 to calculate!', call. = FALSE)
+  if(class(data)=="numeric"|class(data)=="integer"|class(data)=="double" ) data <- as.matrix(data)
+  
+  if(datatype=='incidence_freq'){
+    nT <- data[1,]
+    data <- data[-1,]
+  }
+  data <- data[rowSums(data)>0,,drop=FALSE]
+  distM <- distM[rowSums(data)>0,rowSums(data)>0]
+  if(nrow(data)!=nrow(distM))
+    stop("The number of species in data should equal to that in distance matrix", call. = FALSE)
+  if(is.null(rownames(data))|is.null(rownames(distM))){
+    warning('The species names are not provided in data or distance matrix.', call. = FALSE)
+    rownames(data) <- rownames(distM) <- colnames(distM) <-  paste0('sp',1:nrow(data))
+  }else{
+    if(sum(rownames(data) %in% rownames(distM))!=nrow(distM))
+      stop("Data and distance matrix contain unmatched species", call. = FALSE)
+  }
+  order_sp <- match(rownames(data),rownames(distM))
+  distM <- distM[order_sp,order_sp]
+  
+  if(datatype=='incidence_freq'){
+    data <- rbind(nT,data)
+  }
+  name_sp <- rownames(data)
+  dat <- lapply(1:ncol(data), function(k)  {x <- data[,k];names(x) <- name_sp;x})
+  if(is.null(colnames(data))) {
+    names(dat) <- paste0("site",1:length(dat))
+  }else{
+    names(dat) = colnames(data)
+  }
+  
+  if(is.null(threshold)) {
+    if(datatype=='abundance') {
+      tmp <- sapply(dat, function(x) x/sum(x))
+    }else if(datatype=='incidence_freq'){
+      tmp <- sapply(dat, function(x) x[-1]/sum(x[-1]))
+    }
+    dmean <- sum ( (tmp %*% t(tmp) ) * distM)
+    dmin <- min(distM[distM>0])
+    #dmax <- max(distM)
+    #threshold <- (dmean+dmin)/2
+    threshold <- dmean
+  }else if(sum(threshold<0)>0|sum(threshold>1)>0) {
+    stop("Threshold must be a number between 0 and 1. Use NULL to set it to (dmean+dmin)/2.",call. = FALSE)
+  }
+  
+  if(is.null(level)){
+    if(datatype=='abundance'){
+      level <- sapply(dat,function(x){
+        ni <- sum(x)
+        Coverage(data = x,datatype = datatype,m = 2*ni)
+      })
+      
+    }else if(datatype=='incidence_freq'){
+      level <- sapply(dat,function(x){
+        ni <- x[1]
+        Coverage(data = x,datatype = datatype,m = 2*ni)
+      })
+    }
+    level <- min(level)
+  }
+  
+  out <- invChatFD(datalist = dat, dij = distM, q = q, datatype = datatype,
+                   level=level, nboot = nboot, conf = conf, tau = threshold)
+  out$qFD.LCL[out$qFD.LCL<0] <- 0
+  if((nboot>1)==FALSE){
+    out$qFD.LCL <- NA
+    out$qFD.LCL <- NA
+  }
+  out
+  
+}
+
 
 #' @useDynLib FunD
 #' @importFrom Rcpp sourceCpp

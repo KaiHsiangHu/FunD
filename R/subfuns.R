@@ -180,6 +180,7 @@ data_transform <- function(data,dij,tau){
   # output[,,1] <- out_a
   # output[,,2] <- out_v
   output = list(ai = out_a, vi = out_v)
+  output
 }
 FD_est = function(ai_vi, q){ # ai_vi is array containing two elements: ai and vi
   V_bar <- sum(ai_vi$ai[,1]*ai_vi$vi[,1])
@@ -422,5 +423,88 @@ iNextFD = function(datalist, dij, q = c(0,1,2), datatype, tau, nboot, conf, m){
     # to be added
   }
   return(out)
+}
+#======EstimateFD========
+invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf, tau){
+  qtile <- qnorm(1-(1-conf)/2)
+
+  if(datatype=='abundance'){
+    out <- lapply(datalist,function(x_){
+      data_aivi <- data_transform(data = x_,dij = dij,tau = tau)
+      #n_sp_samp <- sum(aL_table$tgroup=='Tip')
+      est <- invChatFD_abu(ai_vi = data_aivi,data_ = x_,q = q,Cs = level,tau = tau)
+      if(nboot>1){
+        BT <- EstiBootComm.Func(data = x_,distance = dij,datatype = datatype)
+        p_hat = BT[[1]]
+        dij_boot = BT[[2]]
+        n=sum(x_)
+        Boot.X = rmultinom(nboot, n, p_hat)
+        ses <- sapply(1:nboot, function(B){
+          Boot_aivi <- data_transform(data = Boot.X[,B],dij = dij_boot,tau = tau)
+          invChatFD_abu(ai_vi = Boot_aivi,data_ = Boot.X[,B],q = q,Cs = level,tau = tau)$qFD
+        }) %>% apply(., 1, sd)
+      }else{
+        ses <- rep(0,nrow(est))
+      }
+      est <- est %>% mutate(qFD.LCL=qFD-qtile*ses,qFD.UCL=qFD+qtile*ses) 
+    }) %>% do.call(rbind,.)
+  }else if(datatype=='incidence_freq'){
+   # To be added
+  }
+  Community = rep(names(datalist), each = length(q)*length(level)*length(tau))
+  out <- out %>% mutate(site = Community) %>% select(
+    site,m,method,order,SC,qFD,qFD.LCL,qFD.UCL,goalSC,threshold
+  )
+  rownames(out) <- NULL
+  out
+}
+
+invChatFD_abu <- function(ai_vi, data_, q, Cs, tau){
+  n <- sum(data_)
+  refC = Coverage(data_, 'abundance', n)
+  f <- function(m, cvrg) abs(Coverage(data_, 'abundance', m) - cvrg)
+  mm <- sapply(Cs, function(cvrg){
+    if (refC > cvrg) {
+      opt <- optimize(f, cvrg = cvrg, lower = 0, upper = n)
+      mm <- opt$minimum
+      mm <- round(mm)
+    }else if (refC <= cvrg) {
+      f1 <- sum(data_ == 1)
+      f2 <- sum(data_ == 2)
+      if (f1 > 0 & f2 > 0) {
+        A <- (n - 1) * f1/((n - 1) * f1 + 2 * f2)
+      }
+      if (f1 > 1 & f2 == 0) {
+        A <- (n - 1) * (f1 - 1)/((n - 1) * (f1 - 1) + 2)
+      }
+      if (f1 == 1 & f2 == 0) {
+        A <- 1
+      }
+      if (f1 == 0 & f2 == 0) {
+        A <- 1
+      }
+      mm <- (log(n/f1) + log(1 - cvrg))/log(A) - 1
+      mm <- n + mm
+      mm <- round(mm)
+    }
+    mm
+  })
+  mm[mm==0] <- 1
+  SC <- Coverage(data_, 'abundance', mm)
+  out <- FD.m.est(ai_vi = ai_vi,m = mm,q = q)
+  out <- as.vector(out)
+  method <- ifelse(mm>n,'Extrapolated',ifelse(mm<n,'Interpolated','Observed'))
+  method <- rep(method,length(q)*length(tau))
+  m <- rep(mm,length(q)*length(tau))
+  order <- rep(rep(q,each = length(mm)),length(tau))
+  SC <- rep(SC,length(q)*length(tau))
+  goalSC <- rep(Cs,length(q)*length(tau))
+  threshold <- rep(tau,each = length(q)*length(mm))
+  tibble(m = m,method = method,order = order,
+         qFD = out,SC=SC,goalSC = goalSC, threshold = threshold)
+}
+
+invChatFD_inc <- function(ai_vi, data_, q, Cs, tau){
+  # to be added
 }
 
