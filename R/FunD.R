@@ -197,6 +197,7 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
 #' @importFrom stats rmultinom
 #' @importFrom stats qnorm
 #' @importFrom stats sd
+#' @importFrom stats optimize
 #' @return a table including the sample size, sample coverage,
 #' method (Interpolated or Extrapolated), and diversity estimates with each \code{q} for the user-specified sample coverages. \cr\cr
 #' @examples
