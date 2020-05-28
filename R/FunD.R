@@ -87,9 +87,9 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
 
   if(is.null(threshold)) {
     if(datatype=='abundance') {
-      tmp <- rowMeans(sapply(dat, function(x) x/sum(x)))  
+      tmp <- rowMeans(matrix(sapply(dat, function(x) x/sum(x)),ncol = length(dat)))  
     }else if(datatype=='incidence_freq'){
-      tmp <- rowMeans(sapply(dat, function(x) x[-1]/sum(x[-1])))
+      tmp <- rowMeans(matrix(sapply(dat, function(x) x[-1]/sum(x[-1])), ncol = length(dat)))
     }
     dmean <- sum ( (tmp %*% t(tmp) ) * distM)
     dmin <- min(distM[distM>0])
