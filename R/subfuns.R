@@ -137,10 +137,13 @@ AUCtable_mle <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
                          nboot=0, conf=0.95) {
   qtile <- qnorm(1-(1-conf)/2)
   sites <- names(datalist)
-  dmin <- min(dij[dij>0])
-  dmax <- max(dij)
+  # dmin <- min(dij[dij>0])
+  # dmax <- max(dij)
+  # if(is.null(tau)){
+  #   tau <- seq(dmin,dmax,length.out = knots)
+  # }
   if(is.null(tau)){
-    tau <- seq(dmin,dmax,length.out = knots)
+    tau <- seq(0,1,length.out = knots)
   }
   #q_int <- c(0, 1, 2)
   AUC <- FDtable_mle(datalist,dij,tau,q,datatype,nboot = nboot,conf = conf)
@@ -162,16 +165,24 @@ data_transform <- function(data,dij,tau){
   data <- data[data>0]
   out <- lapply(tau,function(tau_){
     dij_ <- dij
-    dij_[which(dij_>tau_,arr.ind = T)] <- tau_
-    a <- as.vector((1 - dij_/tau_) %*% data )
+    if(tau_==0){
+      dij_[dij_>0] <- 1
+      a <- as.vector((1 - dij_/1) %*% data )
+    }else{
+      dij_[which(dij_>tau_,arr.ind = T)] <- tau_
+      a <- as.vector((1 - dij_/tau_) %*% data )
+    }
     data <- data[a!=0]
     a <- a[a!=0]
     v <- data/a
     cbind(a,v)
-  }) 
+  })
   out_a <- matrix(sapply(out, function(x) x[,1]),ncol = length(tau))
   out_v <- matrix(sapply(out, function(x) x[,2]),ncol = length(tau))
   colnames(out_a) <- colnames(out_v) <- paste0('tau_',round(tau,3))
+
+  
+  
   # output <- array(data = 0,dim = c(nrow(out_a),ncol(out_a),2),dimnames = list(
   #   NULL,
   #   paste0('tau_',round(tau,3)),
@@ -282,10 +293,13 @@ AUCtable_est <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
                          nboot=0, conf=0.95) {
   qtile <- qnorm(1-(1-conf)/2)
   sites <- names(datalist)
-  dmin <- min(dij[dij>0])
-  dmax <- max(dij)
+  # dmin <- min(dij[dij>0])
+  # dmax <- max(dij)
+  # if(is.null(tau)){
+  #   tau <- seq(dmin,dmax,length.out = knots)
+  # }
   if(is.null(tau)){
-    tau <- seq(dmin,dmax,length.out = knots)
+    tau <- seq(0,1,length.out = knots)
   }
   #q_int <- c(0, 1, 2)
   AUC <- FDtable_est(datalist,dij,tau,q,datatype,nboot = nboot,conf = conf)$Estoutput
