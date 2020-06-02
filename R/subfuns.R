@@ -438,41 +438,35 @@ iNextFD = function(datalist, dij, q = c(0,1,2), datatype, tau, nboot, conf, m){
   }
   return(out)
 }
-#======EstimateFD========
-invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf, tau){
+AUCtable_iNextFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype, tau=NULL,
+                         nboot=0, conf=0.95, m) {
   qtile <- qnorm(1-(1-conf)/2)
-
-  if(datatype=='abundance'){
-    out <- lapply(datalist,function(x_){
-      data_aivi <- data_transform(data = x_,dij = dij,tau = tau)
-      #n_sp_samp <- sum(aL_table$tgroup=='Tip')
-      est <- invChatFD_abu(ai_vi = data_aivi,data_ = x_,q = q,Cs = level,tau = tau)
-      if(nboot>1){
-        BT <- EstiBootComm.Func(data = x_,distance = dij,datatype = datatype)
-        p_hat = BT[[1]]
-        dij_boot = BT[[2]]
-        n=sum(x_)
-        Boot.X = rmultinom(nboot, n, p_hat)
-        ses <- sapply(1:nboot, function(B){
-          Boot_aivi <- data_transform(data = Boot.X[,B],dij = dij_boot,tau = tau)
-          invChatFD_abu(ai_vi = Boot_aivi,data_ = Boot.X[,B],q = q,Cs = level,tau = tau)$qFD
-        }) %>% apply(., 1, sd)
-      }else{
-        ses <- rep(0,nrow(est))
-      }
-      est <- est %>% mutate(qFD.LCL=qFD-qtile*ses,qFD.UCL=qFD+qtile*ses) 
-    }) %>% do.call(rbind,.)
-  }else if(datatype=='incidence_freq'){
-   # To be added
+  sites <- names(datalist)
+  # dmin <- min(dij[dij>0])
+  # dmax <- max(dij)
+  # if(is.null(tau)){
+  #   tau <- seq(dmin,dmax,length.out = knots)
+  # }
+  if(is.null(tau)){
+    tau <- seq(0,1,length.out = knots)
   }
-  Community = rep(names(datalist), each = length(q)*length(level)*length(tau))
-  out <- out %>% mutate(site = Community) %>% select(
-    site,m,method,order,SC,qFD,qFD.LCL,qFD.UCL,goalSC,threshold
-  )
-  rownames(out) <- NULL
-  out
+  #q_int <- c(0, 1, 2)
+  AUC <- iNextFD(datalist,dij,q,datatype,tau,nboot = nboot,conf = conf,m)
+  AUC <- AUC %>% group_by(m,site,order) %>% 
+    summarise(method = unique(method),
+              AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
+              AUC_R = sum(qFD[-1]*diff(tau)),
+              AUC_LCL_L = sum(qFD.LCL[seq_along(qFD.LCL[-1])]*diff(tau)),
+              AUC_LCL_R = sum(qFD.LCL[-1]*diff(tau)),
+              AUC_UCL_L = sum(qFD.UCL[seq_along(qFD.UCL[-1])]*diff(tau)),
+              AUC_UCL_R = sum(qFD.UCL[-1]*diff(tau)),
+              SC = mean(SC),SC.LCL = mean(SC.LCL), SC.UCL = mean(SC.UCL)) %>% ungroup() %>% 
+    mutate(AUC = (AUC_L+AUC_R)/2, AUC_LCL = (AUC_LCL_L+AUC_LCL_R)/2,
+           AUC_UCL = (AUC_UCL_L+AUC_UCL_R)/2) %>% 
+    select(m,method,order,AUC,AUC_LCL,AUC_UCL,SC,SC.LCL,SC.UCL,site)
+  AUC
 }
-
+#======EstimateFD========
 invChatFD_abu <- function(ai_vi, data_, q, Cs, tau){
   n <- sum(data_)
   refC = Coverage(data_, 'abundance', n)
@@ -521,4 +515,56 @@ invChatFD_abu <- function(ai_vi, data_, q, Cs, tau){
 invChatFD_inc <- function(ai_vi, data_, q, Cs, tau){
   # to be added
 }
+invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf, tau){
+  qtile <- qnorm(1-(1-conf)/2)
 
+  if(datatype=='abundance'){
+    out <- lapply(datalist,function(x_){
+      data_aivi <- data_transform(data = x_,dij = dij,tau = tau)
+      #n_sp_samp <- sum(aL_table$tgroup=='Tip')
+      est <- invChatFD_abu(ai_vi = data_aivi,data_ = x_,q = q,Cs = level,tau = tau)
+      if(nboot>1){
+        BT <- EstiBootComm.Func(data = x_,distance = dij,datatype = datatype)
+        p_hat = BT[[1]]
+        dij_boot = BT[[2]]
+        n=sum(x_)
+        Boot.X = rmultinom(nboot, n, p_hat)
+        ses <- sapply(1:nboot, function(B){
+          Boot_aivi <- data_transform(data = Boot.X[,B],dij = dij_boot,tau = tau)
+          invChatFD_abu(ai_vi = Boot_aivi,data_ = Boot.X[,B],q = q,Cs = level,tau = tau)$qFD
+        }) %>% apply(., 1, sd)
+      }else{
+        ses <- rep(0,nrow(est))
+      }
+      est <- est %>% mutate(qFD.LCL=qFD-qtile*ses,qFD.UCL=qFD+qtile*ses) 
+    }) %>% do.call(rbind,.)
+  }else if(datatype=='incidence_freq'){
+   # To be added
+  }
+  Community = rep(names(datalist), each = length(q)*length(level)*length(tau))
+  out <- out %>% mutate(site = Community) %>% select(
+    site,m,method,order,SC,qFD,qFD.LCL,qFD.UCL,goalSC,threshold
+  )
+  rownames(out) <- NULL
+  out
+}
+AUCtable_invFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype, level, nboot = 0, conf = 0.95, tau=NULL){
+  qtile <- qnorm(1-(1-conf)/2)
+  sites <- names(datalist)
+  if(is.null(tau)){
+    tau <- seq(0,1,length.out = knots)
+  }
+  AUC <- invChatFD(datalist,dij,q,datatype,level,nboot,conf = conf,tau)
+  AUC <- AUC %>% group_by(site,m,goalSC,order) %>% 
+    summarise(method = unique(method),SC = mean(SC),
+              AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
+              AUC_R = sum(qFD[-1]*diff(tau)),
+              AUC_LCL_L = sum(qFD.LCL[seq_along(qFD.LCL[-1])]*diff(tau)),
+              AUC_LCL_R = sum(qFD.LCL[-1]*diff(tau)),
+              AUC_UCL_L = sum(qFD.UCL[seq_along(qFD.UCL[-1])]*diff(tau)),
+              AUC_UCL_R = sum(qFD.UCL[-1]*diff(tau))) %>% ungroup() %>% 
+    mutate(AUC = (AUC_L+AUC_R)/2, AUC_LCL = (AUC_LCL_L+AUC_LCL_R)/2,
+           AUC_UCL = (AUC_UCL_L+AUC_UCL_R)/2) %>% 
+    select(site,m,method,order,SC,AUC,AUC_LCL,AUC_UCL,goalSC)
+  AUC
+}

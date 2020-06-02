@@ -21,7 +21,7 @@
 #' @param conf a positive number < 1 specifying the level of confidence interval, default is 0.95. \cr
 #' @param nboot a positive integer specifying the number of bootstrap replications. Enter 0 to skip bootstrap;
 #' in this case, the caculation of standard errors and confidence intervals will be skipped. Default is 50.
-#' @param threshold a positive value between 0 and 1 specifying tau. If \code{NULL}, \code{threshold} = (dmean+dmin)/2. Default is \code{NULL}.
+#' @param threshold a sequence between 0 and 1 specifying tau. If \code{NULL}, \code{threshold} = dmean/2. Default is \code{NULL}.
 #' @import ggplot2
 #' @import dplyr
 #' @importFrom stats rmultinom
@@ -53,14 +53,14 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
   
   if ((conf < 0) | (conf > 1) | (is.numeric(conf)==F)) stop('conf (confidence level) must be a numerical value between 0 and 1, We use "conf" = 0.95 to calculate!', call. = FALSE)
   if ((nboot < 0) | (is.numeric(nboot)==F)) stop('nboot must be a nonnegative integer, We use "nboot" = 50 to calculate!', call. = FALSE)
-  if(class(data)=="numeric"|class(data)=="integer"|class(data)=="double" ) data <- as.matrix(data)
+  if(class(data)=="numeric"|class(data)=="integer"|class(data)=="double" ) data <- matrix(data, ncol = 1)
   
   if(datatype=='incidence_freq'){
     nT <- data[1,]
-    data <- data[-1,]
+    data <- data[-1,,drop =FALSE]
   }
-  data <- data[rowSums(data)>0,,drop=FALSE]
   distM <- distM[rowSums(data)>0,rowSums(data)>0]
+  data <- data[rowSums(data)>0,,drop=FALSE]
   if(nrow(data)!=nrow(distM))
     stop("The number of species in data should equal to that in distance matrix", call. = FALSE)
   if(is.null(rownames(data))|is.null(rownames(distM))){
@@ -97,7 +97,7 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
     #threshold <- (dmean+dmin)/2
     threshold <- dmean
   }else if(sum(threshold<0)>0|sum(threshold>1)>0) {
-    stop("Threshold must be a number between 0 and 1. Use NULL to set it to (dmean+dmin)/2.",call. = FALSE)
+    stop("Threshold must be a number between 0 and 1. Use NULL to set it to dmean/2.",call. = FALSE)
   }
   
 
@@ -192,7 +192,7 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
 #' @param conf a positive number < 1 specifying the level of confidence interval, default is 0.95. \cr
 #' @param nboot a positive integer specifying the number of bootstrap replications. Enter 0 to skip bootstrap;
 #' in this case, the caculation of standard errors and confidence intervals will be skipped. Default is 50.
-#' @param threshold a positive sequence between 0 and 1 specifying tau. If \code{NULL}, \code{threshold = } dmean. Default is \code{NULL}.
+#' @param threshold a sequence between 0 and 1 specifying tau. If \code{NULL}, \code{threshold = } dmean. Default is \code{NULL}.
 #' @import ggplot2
 #' @import dplyr
 #' @importFrom stats rmultinom
@@ -224,14 +224,14 @@ EstimateFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), level 
   
   if ((conf < 0) | (conf > 1) | (is.numeric(conf)==F)) stop('conf (confidence level) must be a numerical value between 0 and 1, We use "conf" = 0.95 to calculate!', call. = FALSE)
   if ((nboot < 0) | (is.numeric(nboot)==F)) stop('nboot must be a nonnegative integer, We use "nboot" = 50 to calculate!', call. = FALSE)
-  if(class(data)=="numeric"|class(data)=="integer"|class(data)=="double" ) data <- as.matrix(data)
+  if(class(data)=="numeric"|class(data)=="integer"|class(data)=="double" ) data <- matrix(data, ncol = 1)
   
   if(datatype=='incidence_freq'){
     nT <- data[1,]
-    data <- data[-1,]
+    data <- data[-1,,drop =FALSE]
   }
-  data <- data[rowSums(data)>0,,drop=FALSE]
   distM <- distM[rowSums(data)>0,rowSums(data)>0]
+  data <- data[rowSums(data)>0,,drop=FALSE]
   if(nrow(data)!=nrow(distM))
     stop("The number of species in data should equal to that in distance matrix", call. = FALSE)
   if(is.null(rownames(data))|is.null(rownames(distM))){
