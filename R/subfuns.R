@@ -849,14 +849,56 @@ invChatFD_abu <- function(ai_vi, data_, q, Cs, tau){
 }
 
 invChatFD_inc <- function(ai_vi, data_, q, Cs, tau){
-  # to be added
+  n <- data_[1]
+  refC = Coverage(data_, 'incidence_freq', n)
+  f <- function(m, cvrg) abs(Coverage(data_, 'incidence_freq', m) - cvrg)
+  mm <- sapply(Cs, function(cvrg){
+    if (refC > cvrg) {
+      opt <- optimize(f, cvrg = cvrg, lower = 0, upper = n)
+      mm <- opt$minimum
+      mm <- round(mm)
+    }else if (refC <= cvrg) {
+      f1 <- sum(data_ == 1)
+      f2 <- sum(data_ == 2)
+      U <- sum(x)
+      if (f1 > 0 & f2 > 0) {
+        A <- (n - 1) * f1/((n - 1) * f1 + 2 * f2)
+      }
+      if (f1 > 1 & f2 == 0) {
+        A <- (n - 1) * (f1 - 1)/((n - 1) * (f1 - 1) + 2)
+      }
+      if (f1 == 1 & f2 == 0) {
+        A <- 1
+      }
+      if (f1 == 0 & f2 == 0) {
+        A <- 1
+      }
+      mm <- (log(U/f1) + log(1 - cvrg))/log(A) - 1
+      mm <- n + mm
+      mm <- round(mm)
+    }
+    mm
+  })
+  mm[mm==0] <- 1
+  SC <- Coverage(data_, 'incidence_freq', mm)
+  out <- FD.m.est(ai_vi = ai_vi,m = mm,q = q,nT = n)
+  out <- as.vector(out)
+  method <- ifelse(mm>n,'Extrapolated',ifelse(mm<n,'Interpolated','Observed'))
+  method <- rep(method,length(q)*length(tau))
+  m <- rep(mm,length(q)*length(tau))
+  order <- rep(rep(q,each = length(mm)),length(tau))
+  SC <- rep(SC,length(q)*length(tau))
+  goalSC <- rep(Cs,length(q)*length(tau))
+  threshold <- rep(tau,each = length(q)*length(mm))
+  tibble(m = m,method = method,order = order,
+         qFD = out,SC=SC,goalSC = goalSC, threshold = threshold)
 }
 invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf = 0.95, tau){
   qtile <- qnorm(1-(1-conf)/2)
 
   if(datatype=='abundance'){
     out <- lapply(datalist,function(x_){
-      data_aivi <- data_transform(data = x_,dij = dij,tau = tau)
+      data_aivi <- data_transform(data = x_,dij = dij,tau = tau,datatype = datatype)
       #n_sp_samp <- sum(aL_table$tgroup=='Tip')
       est <- invChatFD_abu(ai_vi = data_aivi,data_ = x_,q = q,Cs = level,tau = tau)
       if(nboot>1){
@@ -866,7 +908,7 @@ invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf = 0.95, tau
         n=sum(x_)
         Boot.X = rmultinom(nboot, n, p_hat)
         ses <- sapply(1:nboot, function(B){
-          Boot_aivi <- data_transform(data = Boot.X[,B],dij = dij_boot,tau = tau)
+          Boot_aivi <- data_transform(data = Boot.X[,B],dij = dij_boot,tau = tau,datatype = datatype)
           invChatFD_abu(ai_vi = Boot_aivi,data_ = Boot.X[,B],q = q,Cs = level,tau = tau)$qFD
         }) %>% apply(., 1, sd)
       }else{
@@ -875,7 +917,24 @@ invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf = 0.95, tau
       est <- est %>% mutate(qFD.LCL=qFD-qtile*ses,qFD.UCL=qFD+qtile*ses) 
     }) %>% do.call(rbind,.)
   }else if(datatype=='incidence_freq'){
-   # To be added
+    out <- lapply(datalist,function(x_){
+      nT=x_[1]
+      data_aivi <- data_transform(data = x_,dij = dij,tau = tau,datatype = datatype)
+      est <- invChatFD_inc(ai_vi = data_aivi,data_ = x_,q = q,Cs = level,tau = tau)
+      if(nboot>1){
+        BT <- EstiBootComm.Func(data = x_,distance = dij,datatype = datatype)
+        p_hat = BT[[1]]
+        dij_boot = BT[[2]]
+        ses <- sapply(1:nboot, function(B){
+          Boot.X <- c(nT,rbinom(n = p_hat,size = nT,prob = p_hat))
+          Boot_aivi <- data_transform(data = Boot.X,dij = dij_boot,tau = tau,datatype = datatype)
+          invChatFD_inc(ai_vi = Boot_aivi,data_ = Boot.X,q = q,Cs = level,tau = tau)$qFD
+        }) %>% apply(., 1, sd)
+      }else{
+        ses <- rep(0,nrow(est))
+      }
+      est <- est %>% mutate(qFD.LCL=qFD-qtile*ses,qFD.UCL=qFD+qtile*ses) 
+    }) %>% do.call(rbind,.)
   }
   Community = rep(names(datalist), each = length(q)*length(level)*length(tau))
   out <- out %>% mutate(site = Community) %>% select(
@@ -895,26 +954,49 @@ AUCtable_invFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype, l
     summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
               AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC),m = mean(m),method = unique(method)) %>% 
     ungroup %>% mutate(AUC = (AUC_L+AUC_R)/2) %>% select(site,order,goalSC,m,method,AUC,SC)
-  if(nboot>1){
-    ses <- lapply(1:length(datalist),function(i){
-      Community_ <- rep(sites[[i]],length(q)*length(level))
-      x <- datalist[[i]]
-      BT <- EstiBootComm.Func(data = x,distance = dij,datatype = datatype)
-      p_hat = BT[[1]]
-      dij_boot = BT[[2]]
-      Boot.X = rmultinom(nboot, sum(x), p_hat) %>% split(., seq(ncol(.)))
-      m_boot <- lapply(1:nboot, function(b) m[[i]])
-      ses <- invChatFD(Boot.X,dij_boot,q,datatype,level,nboot = 0,tau = tau) %>% 
-        group_by(site,order,goalSC) %>% 
-        summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
-                  AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC)) %>% ungroup %>% 
-        mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order,goalSC) %>% 
-        summarise(AUC_se = sd(AUC),SC_se = sd(SC)) %>% 
-        ungroup %>% mutate(site = Community_)
-    }) %>% do.call(rbind,.) 
-  }else{
-    ses <- AUC %>% select(site,order,goalSC) %>% mutate(AUC_se = NA, SC_se = NA)
+  if(datatype == 'abundance'){
+    if(nboot>1){
+      ses <- lapply(1:length(datalist),function(i){
+        Community_ <- rep(sites[[i]],length(q)*length(level))
+        x <- datalist[[i]]
+        BT <- EstiBootComm.Func(data = x,distance = dij,datatype = datatype)
+        p_hat = BT[[1]]
+        dij_boot = BT[[2]]
+        Boot.X = rmultinom(nboot, sum(x), p_hat) %>% split(., col(.))
+        ses <- invChatFD(Boot.X,dij_boot,q,datatype,level,nboot = 0,tau = tau) %>% 
+          group_by(site,order,goalSC) %>% 
+          summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
+                    AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC)) %>% ungroup %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order,goalSC) %>% 
+          summarise(AUC_se = sd(AUC),SC_se = sd(SC)) %>% 
+          ungroup %>% mutate(site = Community_)
+      }) %>% do.call(rbind,.) 
+    }else{
+      ses <- AUC %>% select(site,order,goalSC) %>% mutate(AUC_se = NA, SC_se = NA)
+    }
+  }else if(datatype == 'incidence_freq'){
+    if(nboot>1){
+      ses <- lapply(1:length(datalist),function(i){
+        Community_ <- rep(sites[[i]],length(q)*length(level))
+        x <- datalist[[i]]
+        BT <- EstiBootComm.Func(data = x,distance = dij,datatype = datatype)
+        p_hat = BT[[1]]
+        dij_boot = BT[[2]]
+        Boot.X <- sapply(1:nboot,function(b) c(x[1],rbinom(n = p_hat,size = x[1],prob = p_hat))) %>% 
+          split(., col(.))
+        ses <- invChatFD(Boot.X,dij_boot,q,datatype,level,nboot = 0,tau = tau) %>% 
+          group_by(site,order,goalSC) %>% 
+          summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
+                    AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC)) %>% ungroup %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order,goalSC) %>% 
+          summarise(AUC_se = sd(AUC),SC_se = sd(SC)) %>% 
+          ungroup %>% mutate(site = Community_)
+      }) %>% do.call(rbind,.) 
+    }else{
+      ses <- AUC %>% select(site,order,goalSC) %>% mutate(AUC_se = NA, SC_se = NA)
+    }
   }
+  
   AUC <- left_join(x = AUC, y = ses, by = c('site','order','goalSC')) %>% mutate(
     AUC.LCL = AUC - AUC_se * qtile, AUC.UCL = AUC + AUC_se * qtile,
     SC.LCL = SC - SC_se * qtile, SC.UCL = SC + SC_se * qtile) %>% 
