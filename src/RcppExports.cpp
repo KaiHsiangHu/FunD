@@ -16,8 +16,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // RFD
-NumericVector RFD(NumericMatrix x, int n, double m, NumericVector q);
-RcppExport SEXP _FunD_RFD(SEXP xSEXP, SEXP nSEXP, SEXP mSEXP, SEXP qSEXP) {
+NumericVector RFD(NumericMatrix x, int n, double m, NumericVector q, double V_bar);
+RcppExport SEXP _FunD_RFD(SEXP xSEXP, SEXP nSEXP, SEXP mSEXP, SEXP qSEXP, SEXP V_barSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -25,7 +25,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     Rcpp::traits::input_parameter< double >::type m(mSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type q(qSEXP);
-    rcpp_result_gen = Rcpp::wrap(RFD(x, n, m, q));
+    Rcpp::traits::input_parameter< double >::type V_bar(V_barSEXP);
+    rcpp_result_gen = Rcpp::wrap(RFD(x, n, m, q, V_bar));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -86,7 +87,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_FunD_rcpp_hello_world", (DL_FUNC) &_FunD_rcpp_hello_world, 0},
-    {"_FunD_RFD", (DL_FUNC) &_FunD_RFD, 4},
+    {"_FunD_RFD", (DL_FUNC) &_FunD_RFD, 5},
     {"_FunD_FDq0", (DL_FUNC) &_FunD_FDq0, 6},
     {"_FunD_FDq1_1", (DL_FUNC) &_FunD_FDq1_1, 3},
     {"_FunD_FDq2", (DL_FUNC) &_FunD_FDq2, 2},

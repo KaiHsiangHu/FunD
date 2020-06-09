@@ -5,8 +5,8 @@ rcpp_hello_world <- function() {
     .Call('_FunD_rcpp_hello_world', PACKAGE = 'FunD')
 }
 
-RFD <- function(x, n, m, q) {
-    .Call('_FunD_RFD', PACKAGE = 'FunD', x, n, m, q)
+RFD <- function(x, n, m, q, V_bar) {
+    .Call('_FunD_RFD', PACKAGE = 'FunD', x, n, m, q, V_bar)
 }
 
 FDq0 <- function(n, f1, f2, h1, h2, A) {

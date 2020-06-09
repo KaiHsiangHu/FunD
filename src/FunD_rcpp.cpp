@@ -13,7 +13,7 @@ List rcpp_hello_world() {
 }
 
 // [[Rcpp::export]]
-NumericVector RFD(NumericMatrix x , int n  , double m , NumericVector q) {
+NumericVector RFD(NumericMatrix x , int n  , double m , NumericVector q,double V_bar) {
   // x is x*i_vi; return length q
   int nrow = x.nrow();
   int qlength = q.length();
@@ -39,11 +39,11 @@ NumericVector RFD(NumericMatrix x , int n  , double m , NumericVector q) {
         out[j] = hhat[k] + out[j];
       }else if(q[j] == 1){
         //Rcout << "q1 in cpp: " <<log ( (k+1) )<< std::endl;
-        out[j] = -( (k+1) / m ) * log ( (k+1) / m ) * hhat[k] + out[j];
+        out[j] = -( (k+1) / (m*V_bar) ) * log ( (k+1) / (m*V_bar) ) * hhat[k] + out[j];
       }else if(q[j] == 2){
-        out[j] = pow( ( (k+1) / m ),2) * hhat[k] + out[j];
+        out[j] = pow( ( (k+1) / (m*V_bar) ),2) * hhat[k] + out[j];
       }else{
-        out[j] = pow( ( (k+1) / m ),q[j]) * hhat[k] + out[j];
+        out[j] = pow( ( (k+1) / (m*V_bar) ),q[j]) * hhat[k] + out[j];
       }
     }
   }
