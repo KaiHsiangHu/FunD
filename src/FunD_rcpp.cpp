@@ -69,7 +69,7 @@ double FDq0(double n, double f1, double f2, double h1,  double h2, double A) {
   } else if (h2>0){
     ans = ((n-1)/n)*(pow(h1,2)/(2*h2));
   } else{
-    ans = ((n-1)/n)*(h1*(h1-1)/(2*(h2+1)));
+    ans = ((n-1)/n)*(h1*h1/2);
   }
   
   return(ans);
