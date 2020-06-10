@@ -26,7 +26,7 @@ in this case, the caculation of standard errors and confidence intervals will be
 
 \item{conf}{a positive number < 1 specifying the level of confidence interval, default is 0.95. \cr}
 
-\item{threshold}{a positive sequence between 0 and 1 specifying tau. If \code{NULL}, \code{threshold = } dmean. Default is \code{NULL}.}
+\item{threshold}{a sequence between 0 and 1 specifying tau. If \code{NULL}, \code{threshold = } dmean. Default is \code{NULL}.}
 }
 \value{
 a table including the sample size, sample coverage,
@@ -43,6 +43,11 @@ data(FunDdata.inc)
 data <- FunDdata.inc$data[-1,]
 dij <-  FunDdata.inc$dij
 out <- EstimateFD(data = data, distM = dij,datatype = "abundance")
+# Type (2) incidence frequency data 
+data(FunDdata.inc)
+data <- FunDdata.inc$data
+dij <-  FunDdata.inc$dij
+out <- EstimateFD(data = data, distM = dij,datatype = "incidence_freq")
 }
 }
 \references{

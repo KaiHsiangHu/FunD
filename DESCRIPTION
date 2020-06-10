@@ -1,12 +1,12 @@
 Package: FunD
 Type: Package
 Title: What the Package Does in One 'Title Case' Line
-Version: 1.1.6
+Version: 1.2.6
 Date: 2020-03-24
 Author: Your Name
 Maintainer: Your Name <your@email.com>
 Depends: R (>= 2.10)
-Description: Currently only provide iNEXTFD 
+Description: Currently, provide iNEXTFD and EstimateFD to make fair comparison of functional diversity.
 License: GPL (>= 2)
 Imports: Rcpp,
          dplyr,

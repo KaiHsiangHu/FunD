@@ -126,7 +126,7 @@ FDtable_mle <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
     out <- lapply(datalist, function(x){
       n=sum(x)
       data_aivi <- data_transform(data = x,dij = dij,tau = tau,datatype = datatype)
-      emp <- FD_mle(ai_vi = data_aivi,q = q,nt = n) %>% as.numeric()
+      emp <- FD_mle(ai_vi = data_aivi,q = q) %>% as.numeric()
       if(nboot>1){
         BT <- EstiBootComm.Func(data = x,distance = dij,datatype = datatype)
         p_hat = BT[[1]]
@@ -134,7 +134,7 @@ FDtable_mle <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
         Boot.X = rmultinom(nboot, n, p_hat)
         ses <- sapply(1:nboot, function(B){
           Boot_aivi <- data_transform(data = Boot.X[,B],dij = dij_boot,tau = tau,datatype = datatype)
-          FD_mle(ai_vi = Boot_aivi,q = q,nt = n) %>% as.numeric()
+          FD_mle(ai_vi = Boot_aivi,q = q) %>% as.numeric()
         }) %>% apply(., 1, sd)
       }else{
         ses <- rep(0,length(emp))
@@ -860,7 +860,7 @@ invChatFD_inc <- function(ai_vi, data_, q, Cs, tau){
     }else if (refC <= cvrg) {
       f1 <- sum(data_ == 1)
       f2 <- sum(data_ == 2)
-      U <- sum(x)
+      U <- sum(data_)
       if (f1 > 0 & f2 > 0) {
         A <- (n - 1) * f1/((n - 1) * f1 + 2 * f2)
       }

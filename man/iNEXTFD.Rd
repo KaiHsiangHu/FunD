@@ -38,7 +38,7 @@ coverage-based rarefaction and extrapolation curve (\code{plot.type = 2}); sampl
 \item{nboot}{a positive integer specifying the number of bootstrap replications. Enter 0 to skip bootstrap;
 in this case, the caculation of standard errors and confidence intervals will be skipped. Default is 50.}
 
-\item{threshold}{a positive value between 0 and 1 specifying tau. If \code{NULL}, \code{threshold} = (dmean+dmin)/2. Default is \code{NULL}.}
+\item{threshold}{a sequence between 0 and 1 specifying tau. If \code{NULL}, \code{threshold} = dmean/2. Default is \code{NULL}.}
 }
 \value{
 a list of one objects: \cr\cr
@@ -55,6 +55,11 @@ data(FunDdata.inc)
 data <- FunDdata.inc$data[-1,]
 dij <-  FunDdata.inc$dij
 out <- iNEXTFD(data = data, distM = dij,datatype = "abundance")
+# Type (2) incidence frequency data 
+data(FunDdata.inc)
+data <- FunDdata.inc$data
+dij <-  FunDdata.inc$dij
+out <- iNEXTFD(data = data, distM = dij,datatype = "incidence_freq")
 }
 }
 \references{

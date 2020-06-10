@@ -25,6 +25,7 @@
 #' @import ggplot2
 #' @import dplyr
 #' @importFrom stats rmultinom
+#' @importFrom stats rbinom
 #' @importFrom stats qnorm
 #' @importFrom stats sd
 #' @return a list of one objects: \cr\cr
@@ -36,6 +37,11 @@
 #' data <- FunDdata.inc$data[-1,]
 #' dij <-  FunDdata.inc$dij
 #' out <- iNEXTFD(data = data, distM = dij,datatype = "abundance")
+#' # Type (2) incidence frequency data 
+#' data(FunDdata.inc)
+#' data <- FunDdata.inc$data
+#' dij <-  FunDdata.inc$dij
+#' out <- iNEXTFD(data = data, distM = dij,datatype = "incidence_freq")
 #' }
 #' @references
 #' Chao, A., Chiu C.-H. and Jost, L. (2010). functional diversity measures based on Hill numbers. Philosophical Transactions of the Royal Society B., 365, 3599-3609.\cr\cr
@@ -123,7 +129,12 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
       }
     }
     size <- lapply(1:length(dat),function(i){
-      ni <- sum(dat[[i]])
+      if(datatype == "abundance") {
+        ni <- sum(dat[[i]])
+      }else if(datatype == "incidence_freq"){
+        ni <- dat[[i]][1]
+      }
+     
       if(endpoint[i] <= ni){
         mi <- floor(seq(1,endpoint[i],length.out = knots[i]))
       }else{
@@ -196,6 +207,7 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
 #' @import ggplot2
 #' @import dplyr
 #' @importFrom stats rmultinom
+#' @importFrom stats rbinom
 #' @importFrom stats qnorm
 #' @importFrom stats sd
 #' @importFrom stats optimize
@@ -208,6 +220,11 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
 #' data <- FunDdata.inc$data[-1,]
 #' dij <-  FunDdata.inc$dij
 #' out <- EstimateFD(data = data, distM = dij,datatype = "abundance")
+#' # Type (2) incidence frequency data 
+#' data(FunDdata.inc)
+#' data <- FunDdata.inc$data
+#' dij <-  FunDdata.inc$dij
+#' out <- EstimateFD(data = data, distM = dij,datatype = "incidence_freq")
 #' }
 #' @references
 #' Chao, A., Chiu C.-H. and Jost, L. (2010). functional diversity measures based on Hill numbers. Philosophical Transactions of the Royal Society B., 365, 3599-3609.\cr\cr
