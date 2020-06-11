@@ -65,8 +65,6 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
     nT <- data[1,]
     data <- data[-1,,drop =FALSE]
   }
-  distM <- distM[rowSums(data)>0,rowSums(data)>0]
-  data <- data[rowSums(data)>0,,drop=FALSE]
   if(nrow(data)!=nrow(distM))
     stop("The number of species in data should equal to that in distance matrix", call. = FALSE)
   if(is.null(rownames(data))|is.null(rownames(distM))){
@@ -78,6 +76,8 @@ iNEXTFD <- function(data, distM, datatype = "abundance", q = c(0,1,2), endpoint 
   }
   order_sp <- match(rownames(data),rownames(distM))
   distM <- distM[order_sp,order_sp]
+  distM <- distM[rowSums(data)>0,rowSums(data)>0]
+  data <- data[rowSums(data)>0,,drop=FALSE]
 
   if(datatype=='incidence_freq'){
     data <- rbind(nT,data)
