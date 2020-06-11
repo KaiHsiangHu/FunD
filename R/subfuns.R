@@ -797,7 +797,7 @@ AUCtable_iNextFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype,
   AUC <- left_join(x = AUC, y = ses, by = c('site','order','m')) %>% mutate(
     AUC.LCL = AUC - AUC_se * qtile, AUC.UCL = AUC + AUC_se * qtile,
     SC.LCL = SC - SC_se * qtile, SC.UCL = SC + SC_se * qtile) %>% 
-    select(site,order,m,method,AUC,AUC.LCL,AUC.UCL,SC.LCL,SC.UCL)
+    select(site,order,m,method,AUC,AUC.LCL,AUC.UCL,SC,SC.LCL,SC.UCL)
   AUC$AUC.LCL[AUC$AUC.LCL<0] <- 0
   AUC$SC.LCL[AUC$SC.LCL<0] <- 0
   AUC
@@ -1000,7 +1000,7 @@ AUCtable_invFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype, l
   AUC <- left_join(x = AUC, y = ses, by = c('site','order','goalSC')) %>% mutate(
     AUC.LCL = AUC - AUC_se * qtile, AUC.UCL = AUC + AUC_se * qtile,
     SC.LCL = SC - SC_se * qtile, SC.UCL = SC + SC_se * qtile) %>% 
-    select(site,order,goalSC,m,method,AUC,AUC.LCL,AUC.UCL,SC.LCL,SC.UCL)
+    select(site,order,goalSC,m,method,AUC,AUC.LCL,AUC.UCL,SC,SC.LCL,SC.UCL)
   AUC$AUC.LCL[AUC$AUC.LCL<0] <- 0
   AUC$SC.LCL[AUC$SC.LCL<0] <- 0
   AUC
