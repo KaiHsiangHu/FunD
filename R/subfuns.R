@@ -137,7 +137,7 @@ FDtable_mle <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
           FD_mle(ai_vi = Boot_aivi,q = q) %>% as.numeric()
         }) %>% apply(., 1, sd)
       }else{
-        ses <- rep(0,length(emp))
+        ses <- rep(NA,length(emp))
       }
       output <- cbind(emp,emp-qtile*ses,emp+qtile*ses)
       output[output[,2]<0,2] <- 0
@@ -158,7 +158,7 @@ FDtable_mle <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
           FD_mle(ai_vi = Boot_aivi,q = q) %>% as.numeric()
         }) %>% apply(., 1, sd)
       }else{
-        ses <- rep(0,length(emp))
+        ses <- rep(NA,length(emp))
       }
       output <- cbind(emp,emp-qtile*ses,emp+qtile*ses)
       output[output[,2]<0,2] <- 0
@@ -461,7 +461,7 @@ FDtable_est <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
           FD_est(ai_vi = Boot_aivi,q = q,nT = n)$est %>% as.numeric()
         }) %>% apply(., 1, sd)
       }else{
-        ses <- rep(0,length(est))
+        ses <- rep(NA,length(est))
       }
       output <- cbind(est,est-qtile*ses,est+qtile*ses)
       output[output[,2]<0,2] <- 0
@@ -483,7 +483,7 @@ FDtable_est <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
           FD_est(ai_vi = Boot_aivi,q = q,nT = nT)$est %>% as.numeric()
         }) %>% apply(., 1, sd)
       }else{
-        ses <- rep(0,length(est))
+        ses <- rep(NA,length(est))
       }
       output <- cbind(est,est-qtile*ses,est+qtile*ses)
       output[output[,2]<0,2] <- 0
@@ -675,7 +675,7 @@ iNextFD = function(datalist, dij, q = c(0,1,2), datatype, tau, nboot, conf = 0.9
           return(c(qFDm_b,covm_b))
         }) %>% apply(., 1, sd)
       }else{
-        ses <- rep(0,length(c(qFDm,covm)))
+        ses <- rep(NA,length(c(qFDm,covm)))
       }
       method <- ifelse(m[[i]]>n,'Extrapolation',ifelse(m[[i]]<n,'Rarefaction','Observed'))
       method <- rep(method,length(q)*length(tau))
@@ -713,7 +713,7 @@ iNextFD = function(datalist, dij, q = c(0,1,2), datatype, tau, nboot, conf = 0.9
           return(c(qFDm_b,covm_b))
         }) %>% apply(., 1, sd)
       }else{
-        ses <- rep(0,length(c(qFDm,covm)))
+        ses <- rep(NA,length(c(qFDm,covm)))
       }
       method <- ifelse(m[[i]]>nT,'Extrapolation',ifelse(m[[i]]<nT,'Rarefaction','Observed'))
       method <- rep(method,length(q)*length(tau))
@@ -912,7 +912,7 @@ invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf = 0.95, tau
           invChatFD_abu(ai_vi = Boot_aivi,data_ = Boot.X[,B],q = q,Cs = level,tau = tau)$qFD
         }) %>% apply(., 1, sd)
       }else{
-        ses <- rep(0,nrow(est))
+        ses <- rep(NA,nrow(est))
       }
       est <- est %>% mutate(qFD.LCL=qFD-qtile*ses,qFD.UCL=qFD+qtile*ses) 
     }) %>% do.call(rbind,.)
@@ -931,7 +931,7 @@ invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf = 0.95, tau
           invChatFD_inc(ai_vi = Boot_aivi,data_ = Boot.X,q = q,Cs = level,tau = tau)$qFD
         }) %>% apply(., 1, sd)
       }else{
-        ses <- rep(0,nrow(est))
+        ses <- rep(NA,nrow(est))
       }
       est <- est %>% mutate(qFD.LCL=qFD-qtile*ses,qFD.UCL=qFD+qtile*ses) 
     }) %>% do.call(rbind,.)
