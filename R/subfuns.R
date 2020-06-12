@@ -168,7 +168,7 @@ FDtable_mle <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
   }
   sites_tmp <- rep(sites,each = length(q)*length(tau))
   tau_tmp <- rep(rep(tau,each = length(q)),length(sites))
-  Output <- tibble(order = rep(q,length(tau)*length(sites)), Empirical = out[,1],
+  Output <- tibble(Order.q = rep(q,length(tau)*length(sites)), Empirical = out[,1],
                        LCL = out[,2], UCL = out[,3],
                        tau = tau_tmp,Community = sites_tmp)
   Output
@@ -188,10 +188,10 @@ AUCtable_mle <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
   #q_int <- c(0, 1, 2)
   
   AUC <- FDtable_mle(datalist,dij,tau,q,datatype,nboot = 0) %>%
-    group_by(Community,order) %>% 
+    group_by(Community,Order.q) %>% 
     summarise(AUC_L = sum(Empirical[seq_along(Empirical[-1])]*diff(tau)),
               AUC_R = sum(Empirical[-1]*diff(tau))) %>% ungroup %>% 
-    mutate(AUC = (AUC_L+AUC_R)/2) %>% select(Community,order,AUC)
+    mutate(AUC = (AUC_L+AUC_R)/2) %>% select(Community,Order.q,AUC)
   if(datatype=='abundance'){
     if(nboot>1){
       ses <- lapply(datalist,function(x){
@@ -200,14 +200,14 @@ AUCtable_mle <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
         dij_boot = BT[[2]]
         Boot.X = rmultinom(nboot, sum(x), p_hat) %>% split(., col(.))
         ses <- FDtable_mle(Boot.X,dij_boot,tau,q,datatype,nboot = 0) %>% 
-          group_by(Community,order) %>% 
+          group_by(Community,Order.q) %>% 
           summarise(AUC_L = sum(Empirical[seq_along(Empirical[-1])]*diff(tau)),
                     AUC_R = sum(Empirical[-1]*diff(tau))) %>% ungroup %>% 
-          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order) %>% summarise(se = sd(AUC)) %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(Order.q) %>% summarise(se = sd(AUC)) %>% 
           ungroup
       }) %>% do.call(rbind,.) %>% mutate(Community = rep(sites,each = length(q)))
     }else{
-      ses <- tibble(order = rep(q,length(datalist)), se = NA, Community = rep(sites,each = length(q)))
+      ses <- tibble(Order.q = rep(q,length(datalist)), se = NA, Community = rep(sites,each = length(q)))
     }
   }else if(datatype=='incidence_freq'){
     if(nboot>1){
@@ -218,18 +218,18 @@ AUCtable_mle <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
         Boot.X <- sapply(1:nboot,function(b) c(x[1],rbinom(n = p_hat,size = x[1],prob = p_hat))) %>%
           split(., col(.))
         ses <- FDtable_mle(Boot.X,dij_boot,tau,q,datatype,nboot = 0) %>% 
-          group_by(Community,order) %>% 
+          group_by(Community,Order.q) %>% 
           summarise(AUC_L = sum(Empirical[seq_along(Empirical[-1])]*diff(tau)),
                     AUC_R = sum(Empirical[-1]*diff(tau))) %>% ungroup %>% 
-          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order) %>% summarise(se = sd(AUC)) %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(Order.q) %>% summarise(se = sd(AUC)) %>% 
           ungroup
       }) %>% do.call(rbind,.) %>% mutate(Community = rep(sites,each = length(q)))
     }else{
-      ses <- tibble(order = rep(q,length(datalist)), se = NA, Community = rep(sites,each = length(q)))
+      ses <- tibble(Order.q = rep(q,length(datalist)), se = NA, Community = rep(sites,each = length(q)))
     }
   }
  
-  AUC <- left_join(x = AUC, y = ses, by = c('Community','order')) %>% mutate(LCL = AUC - se * qtile,
+  AUC <- left_join(x = AUC, y = ses, by = c('Community','Order.q')) %>% mutate(LCL = AUC - se * qtile,
                                                                     UCL = AUC + se * qtile) %>% 
     select(-se)
   AUC$LCL[AUC$LCL<0] <- 0
@@ -501,7 +501,7 @@ FDtable_est <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
     do.call(rbind,.) #%>% mutate(Community = rep(names(datalist),each = length(q)))
   sites_tmp <- rep(sites,each = length(q)*length(tau))
   tau_tmp <- rep(rep(tau,each = length(q)),length(sites))
-  Estoutput <- tibble(order = rep(q,length(tau)*length(sites)), Estimated = Estoutput[,1],
+  Estoutput <- tibble(Order.q = rep(q,length(tau)*length(sites)), Estimated = Estoutput[,1],
                    LCL = Estoutput[,2], UCL = Estoutput[,3],
                    tau = tau_tmp,Community = sites_tmp)
   Estoutput$LCL[Estoutput$LCL<0] = 0
@@ -521,10 +521,10 @@ AUCtable_est <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
   }
   #q_int <- c(0, 1, 2)
   AUC <- FDtable_est(datalist,dij,tau,q,datatype,nboot = 0)$Estoutput %>%
-    group_by(Community,order) %>% 
+    group_by(Community,Order.q) %>% 
     summarise(AUC_L = sum(Estimated[seq_along(Estimated[-1])]*diff(tau)),
               AUC_R = sum(Estimated[-1]*diff(tau))) %>% ungroup %>% 
-    mutate(AUC = (AUC_L+AUC_R)/2) %>% select(Community,order,AUC)
+    mutate(AUC = (AUC_L+AUC_R)/2) %>% select(Community,Order.q,AUC)
   if(datatype=='abundance'){
     if(nboot>1){
       ses <- lapply(datalist,function(x){
@@ -533,14 +533,14 @@ AUCtable_est <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
         dij_boot = BT[[2]]
         Boot.X = rmultinom(nboot, sum(x), p_hat) %>% split(., col(.))
         ses <- FDtable_est(Boot.X,dij_boot,tau,q,datatype,nboot = 0)$Estoutput %>% 
-          group_by(Community,order) %>% 
+          group_by(Community,Order.q) %>% 
           summarise(AUC_L = sum(Estimated[seq_along(Estimated[-1])]*diff(tau)),
                     AUC_R = sum(Estimated[-1]*diff(tau))) %>% ungroup %>% 
-          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order) %>% summarise(se = sd(AUC)) %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(Order.q) %>% summarise(se = sd(AUC)) %>% 
           ungroup
       }) %>% do.call(rbind,.) %>% mutate(Community = rep(sites,each = length(q)))
     }else{
-      ses <- tibble(order = rep(q,length(datalist)), se = NA, Community = rep(sites,each = length(q)))
+      ses <- tibble(Order.q = rep(q,length(datalist)), se = NA, Community = rep(sites,each = length(q)))
     }
   }else if(datatype=='incidence_freq'){
     if(nboot>1){
@@ -551,17 +551,17 @@ AUCtable_est <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
         Boot.X <- sapply(1:nboot,function(b) c(x[1],rbinom(n = p_hat,size = x[1],prob = p_hat))) %>%
           split(., col(.))
         ses <- FDtable_est(Boot.X,dij_boot,tau,q,datatype,nboot = 0)$Estoutput %>% 
-          group_by(Community,order) %>% 
+          group_by(Community,Order.q) %>% 
           summarise(AUC_L = sum(Estimated[seq_along(Estimated[-1])]*diff(tau)),
                     AUC_R = sum(Estimated[-1]*diff(tau))) %>% ungroup %>% 
-          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order) %>% summarise(se = sd(AUC)) %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(Order.q) %>% summarise(se = sd(AUC)) %>% 
           ungroup
       }) %>% do.call(rbind,.) %>% mutate(Community = rep(sites,each = length(q)))
     }else{
-      ses <- tibble(order = rep(q,length(datalist)), se = NA, Community = rep(sites,each = length(q)))
+      ses <- tibble(Order.q = rep(q,length(datalist)), se = NA, Community = rep(sites,each = length(q)))
     }
   }
-  AUC <- left_join(x = AUC, y = ses, by = c('Community','order')) %>% mutate(LCL = AUC - se * qtile,
+  AUC <- left_join(x = AUC, y = ses, by = c('Community','Order.q')) %>% mutate(LCL = AUC - se * qtile,
                                                                              UCL = AUC + se * qtile) %>% 
     select(-se)
   AUC$LCL[AUC$LCL<0] <- 0
@@ -685,11 +685,11 @@ iNextFD = function(datalist, dij, q = c(0,1,2), datatype, tau, nboot, conf = 0.9
       ses_cov <- rep(ses_cov,each = length(q)*length(tau))
       ses_fd <- ses[-((length(ses)-length(m[[i]])+1):length(ses))]
       covm <- rep(covm,length(q)*length(tau))
-      tibble(m=rep(m[[i]],length(q)*length(tau)),method=method,order=orderq,
+      tibble(m=rep(m[[i]],length(q)*length(tau)),method=method,Order.q=orderq,
              qFD=qFDm,qFD.LCL=qFDm-qtile*ses_fd,qFD.UCL=qFDm+qtile*ses_fd,
              SC=covm,SC.LCL=covm-qtile*ses_cov,SC.UCL=covm+qtile*ses_cov,
-             site = sites[i],threshold = threshold) %>% 
-      arrange(threshold,order)
+             Community = sites[i],threshold = threshold) %>% 
+      arrange(threshold,Order.q)
     }) %>% do.call(rbind, .)
    
   }else if(datatype=="incidence_freq"){
@@ -723,11 +723,11 @@ iNextFD = function(datalist, dij, q = c(0,1,2), datatype, tau, nboot, conf = 0.9
       ses_cov <- rep(ses_cov,each = length(q)*length(tau))
       ses_fd <- ses[-((length(ses)-length(m[[i]])+1):length(ses))]
       covm <- rep(covm,length(q)*length(tau))
-      tibble(m=rep(m[[i]],length(q)*length(tau)),method=method,order=orderq,
+      tibble(m=rep(m[[i]],length(q)*length(tau)),method=method,Order.q=orderq,
              qFD=qFDm,qFD.LCL=qFDm-qtile*ses_fd,qFD.UCL=qFDm+qtile*ses_fd,
              SC=covm,SC.LCL=covm-qtile*ses_cov,SC.UCL=covm+qtile*ses_cov,
-             site = sites[i],threshold = threshold) %>% 
-        arrange(threshold,order)
+             Community = sites[i],threshold = threshold) %>% 
+        arrange(threshold,Order.q)
     }) %>% do.call(rbind, .)
   }
   return(out)
@@ -745,10 +745,10 @@ AUCtable_iNextFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype,
     tau <- seq(0,1,length.out = knots)
   }
   AUC <- iNextFD(datalist,dij,q,datatype,tau,nboot = 0,m = m) %>%
-    group_by(site,order,m) %>% 
+    group_by(Community,Order.q,m) %>% 
     summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
               AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC),method = unique(method)) %>% ungroup %>% 
-    mutate(AUC = (AUC_L+AUC_R)/2) %>% select(site,order,m,AUC,SC,method)
+    mutate(AUC = (AUC_L+AUC_R)/2) %>% select(Community,Order.q,m,AUC,SC,method)
   if(datatype == 'abundance'){
     if(nboot>1){
       ses <- lapply(1:length(datalist),function(i){
@@ -760,15 +760,15 @@ AUCtable_iNextFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype,
         Boot.X = rmultinom(nboot, sum(x), p_hat) %>% split(., col(.))
         m_boot <- lapply(1:nboot, function(b) m[[i]])
         ses <- iNextFD(Boot.X,dij_boot,q,datatype,tau,nboot = 0,m = m_boot) %>% 
-          group_by(site,order,m) %>% 
+          group_by(Community,Order.q,m) %>% 
           summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
                     AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC)) %>% ungroup %>% 
-          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order,m) %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(Order.q,m) %>% 
           summarise(AUC_se = sd(AUC),SC_se = sd(SC)) %>% 
-          ungroup %>% mutate(site = Community_)
+          ungroup %>% mutate(Community = Community_)
       }) %>% do.call(rbind,.) 
     }else{
-      ses <- AUC %>% select(site,order,m) %>% mutate(AUC_se = NA, SC_se = NA)
+      ses <- AUC %>% select(Community,Order.q,m) %>% mutate(AUC_se = NA, SC_se = NA)
     }
   }else if (datatype == 'incidence_freq'){
     if(nboot>1){
@@ -782,22 +782,22 @@ AUCtable_iNextFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype,
           split(., col(.))
         m_boot <- lapply(1:nboot, function(b) m[[i]])
         ses <- iNextFD(Boot.X,dij_boot,q,datatype,tau,nboot = 0,m = m_boot) %>% 
-          group_by(site,order,m) %>% 
+          group_by(Community,Order.q,m) %>% 
           summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
                     AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC)) %>% ungroup %>% 
-          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order,m) %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(Order.q,m) %>% 
           summarise(AUC_se = sd(AUC),SC_se = sd(SC)) %>% 
-          ungroup %>% mutate(site = Community_)
+          ungroup %>% mutate(Community = Community_)
       }) %>% do.call(rbind,.) 
     }else{
-      ses <- AUC %>% select(site,order,m) %>% mutate(AUC_se = NA, SC_se = NA)
+      ses <- AUC %>% select(Community,Order.q,m) %>% mutate(AUC_se = NA, SC_se = NA)
     }
   }
   
-  AUC <- left_join(x = AUC, y = ses, by = c('site','order','m')) %>% mutate(
+  AUC <- left_join(x = AUC, y = ses, by = c('Community','Order.q','m')) %>% mutate(
     AUC.LCL = AUC - AUC_se * qtile, AUC.UCL = AUC + AUC_se * qtile,
     SC.LCL = SC - SC_se * qtile, SC.UCL = SC + SC_se * qtile) %>% 
-    select(site,order,m,method,AUC,AUC.LCL,AUC.UCL,SC,SC.LCL,SC.UCL)
+    select(Community,Order.q,m,method,AUC,AUC.LCL,AUC.UCL,SC,SC.LCL,SC.UCL)
   AUC$AUC.LCL[AUC$AUC.LCL<0] <- 0
   AUC$SC.LCL[AUC$SC.LCL<0] <- 0
   AUC
@@ -844,7 +844,7 @@ invChatFD_abu <- function(ai_vi, data_, q, Cs, tau){
   SC <- rep(SC,length(q)*length(tau))
   goalSC <- rep(Cs,length(q)*length(tau))
   threshold <- rep(tau,each = length(q)*length(mm))
-  tibble(m = m,method = method,order = order,
+  tibble(m = m,method = method,Order.q = order,
          qFD = out,SC=SC,goalSC = goalSC, threshold = threshold)
 }
 
@@ -890,7 +890,7 @@ invChatFD_inc <- function(ai_vi, data_, q, Cs, tau){
   SC <- rep(SC,length(q)*length(tau))
   goalSC <- rep(Cs,length(q)*length(tau))
   threshold <- rep(tau,each = length(q)*length(mm))
-  tibble(m = m,method = method,order = order,
+  tibble(m = m,method = method,Order.q = order,
          qFD = out,SC=SC,goalSC = goalSC, threshold = threshold)
 }
 invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf = 0.95, tau){
@@ -937,8 +937,8 @@ invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf = 0.95, tau
     }) %>% do.call(rbind,.)
   }
   Community = rep(names(datalist), each = length(q)*length(level)*length(tau))
-  out <- out %>% mutate(site = Community) %>% select(
-    site,m,method,order,SC,qFD,qFD.LCL,qFD.UCL,goalSC,threshold
+  out <- out %>% mutate(Community = Community) %>% select(
+    Community,m,method,Order.q,SC,qFD,qFD.LCL,qFD.UCL,goalSC,threshold
   )
   rownames(out) <- NULL
   out
@@ -950,10 +950,10 @@ AUCtable_invFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype, l
     tau <- seq(0,1,length.out = knots)
   }
   AUC <- invChatFD(datalist,dij,q,datatype,level,nboot = 0,tau = tau) %>%
-    group_by(site,order,goalSC) %>% 
+    group_by(Community,Order.q,goalSC) %>% 
     summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
               AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC),m = mean(m),method = unique(method)) %>% 
-    ungroup %>% mutate(AUC = (AUC_L+AUC_R)/2) %>% select(site,order,goalSC,m,method,AUC,SC)
+    ungroup %>% mutate(AUC = (AUC_L+AUC_R)/2) %>% select(Community,Order.q,goalSC,m,method,AUC,SC)
   if(datatype == 'abundance'){
     if(nboot>1){
       ses <- lapply(1:length(datalist),function(i){
@@ -964,15 +964,15 @@ AUCtable_invFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype, l
         dij_boot = BT[[2]]
         Boot.X = rmultinom(nboot, sum(x), p_hat) %>% split(., col(.))
         ses <- invChatFD(Boot.X,dij_boot,q,datatype,level,nboot = 0,tau = tau) %>% 
-          group_by(site,order,goalSC) %>% 
+          group_by(Community,Order.q,goalSC) %>% 
           summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
                     AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC)) %>% ungroup %>% 
-          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order,goalSC) %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(Order.q,goalSC) %>% 
           summarise(AUC_se = sd(AUC),SC_se = sd(SC)) %>% 
-          ungroup %>% mutate(site = Community_)
+          ungroup %>% mutate(Community = Community_)
       }) %>% do.call(rbind,.) 
     }else{
-      ses <- AUC %>% select(site,order,goalSC) %>% mutate(AUC_se = NA, SC_se = NA)
+      ses <- AUC %>% select(Community,Order.q,goalSC) %>% mutate(AUC_se = NA, SC_se = NA)
     }
   }else if(datatype == 'incidence_freq'){
     if(nboot>1){
@@ -985,22 +985,22 @@ AUCtable_invFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype, l
         Boot.X <- sapply(1:nboot,function(b) c(x[1],rbinom(n = p_hat,size = x[1],prob = p_hat))) %>% 
           split(., col(.))
         ses <- invChatFD(Boot.X,dij_boot,q,datatype,level,nboot = 0,tau = tau) %>% 
-          group_by(site,order,goalSC) %>% 
+          group_by(Community,Order.q,goalSC) %>% 
           summarise(AUC_L = sum(qFD[seq_along(qFD[-1])]*diff(tau)),
                     AUC_R = sum(qFD[-1]*diff(tau)),SC = mean(SC)) %>% ungroup %>% 
-          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(order,goalSC) %>% 
+          mutate(AUC = (AUC_L+AUC_R)/2) %>% group_by(Order.q,goalSC) %>% 
           summarise(AUC_se = sd(AUC),SC_se = sd(SC)) %>% 
-          ungroup %>% mutate(site = Community_)
+          ungroup %>% mutate(Community = Community_)
       }) %>% do.call(rbind,.) 
     }else{
-      ses <- AUC %>% select(site,order,goalSC) %>% mutate(AUC_se = NA, SC_se = NA)
+      ses <- AUC %>% select(Community,Order.q,goalSC) %>% mutate(AUC_se = NA, SC_se = NA)
     }
   }
   
-  AUC <- left_join(x = AUC, y = ses, by = c('site','order','goalSC')) %>% mutate(
+  AUC <- left_join(x = AUC, y = ses, by = c('Community','Order.q','goalSC')) %>% mutate(
     AUC.LCL = AUC - AUC_se * qtile, AUC.UCL = AUC + AUC_se * qtile,
     SC.LCL = SC - SC_se * qtile, SC.UCL = SC + SC_se * qtile) %>% 
-    select(site,order,goalSC,m,method,AUC,AUC.LCL,AUC.UCL,SC,SC.LCL,SC.UCL)
+    select(Community,Order.q,goalSC,m,method,AUC,AUC.LCL,AUC.UCL,SC,SC.LCL,SC.UCL)
   AUC$AUC.LCL[AUC$AUC.LCL<0] <- 0
   AUC$SC.LCL[AUC$SC.LCL<0] <- 0
   AUC
