@@ -603,6 +603,8 @@ FD.m.est = function(ai_vi, m, q, nT){
         RFD(av,nT,mm,q,V_bar) 
       }else if(mm==nT){
         obs_i
+      }else if(mm==Inf){
+        asy_i
       }else{
         EFD(m = mm,qs = q,obs = obs_i,asy = asy_i,beta = beta,av = av)
       }
