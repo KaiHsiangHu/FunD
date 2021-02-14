@@ -173,7 +173,7 @@ FDtable_mle <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
                        tau = tau_tmp,Community = sites_tmp)
   Output
 }
-AUCtable_mle <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, datatype,
+AUCtable_mle <- function(datalist, dij, q = c(0,1,2), tau=NULL, datatype,
                          nboot=0, conf=0.95) {
   qtile <- qnorm(1-(1-conf)/2)
   sites <- names(datalist)
@@ -183,7 +183,7 @@ AUCtable_mle <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
   #   tau <- seq(dmin,dmax,length.out = knots)
   # }
   if(is.null(tau)){
-    tau <- seq(0,1,length.out = knots)
+    tau <- seq(0,1,length.out = 100)
   }
   #q_int <- c(0, 1, 2)
   
@@ -505,9 +505,10 @@ FDtable_est <- function(datalist, dij, tau, q, datatype, nboot = 30, conf = 0.95
                    LCL = Estoutput[,2], UCL = Estoutput[,3],
                    tau = tau_tmp,Community = sites_tmp)
   Estoutput$LCL[Estoutput$LCL<0] = 0
-  return(list(Estoutput = Estoutput, info = info))
+  # return(list(Estoutput = Estoutput, info = info))
+  return(Estoutput)
 }
-AUCtable_est <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, datatype,
+AUCtable_est <- function(datalist, dij, q = c(0,1,2), tau=NULL, datatype,
                          nboot=0, conf=0.95) {
   qtile <- qnorm(1-(1-conf)/2)
   sites <- names(datalist)
@@ -517,10 +518,10 @@ AUCtable_est <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
   #   tau <- seq(dmin,dmax,length.out = knots)
   # }
   if(is.null(tau)){
-    tau <- seq(0,1,length.out = knots)
+    tau <- seq(0,1,length.out = 100)
   }
   #q_int <- c(0, 1, 2)
-  AUC <- FDtable_est(datalist,dij,tau,q,datatype,nboot = 0)$Estoutput %>%
+  AUC <- FDtable_est(datalist,dij,tau,q,datatype,nboot = 0) %>%
     group_by(Community,Order.q) %>% 
     summarise(AUC_L = sum(Estimated[seq_along(Estimated[-1])]*diff(tau)),
               AUC_R = sum(Estimated[-1]*diff(tau))) %>% ungroup %>% 
@@ -532,7 +533,7 @@ AUCtable_est <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
         p_hat = BT[[1]]
         dij_boot = BT[[2]]
         Boot.X = rmultinom(nboot, sum(x), p_hat) %>% split(., col(.))
-        ses <- FDtable_est(Boot.X,dij_boot,tau,q,datatype,nboot = 0)$Estoutput %>% 
+        ses <- FDtable_est(Boot.X,dij_boot,tau,q,datatype,nboot = 0) %>% 
           group_by(Community,Order.q) %>% 
           summarise(AUC_L = sum(Estimated[seq_along(Estimated[-1])]*diff(tau)),
                     AUC_R = sum(Estimated[-1]*diff(tau))) %>% ungroup %>% 
@@ -550,7 +551,7 @@ AUCtable_est <- function(datalist, dij, q = c(0,1,2), knots = 100, tau=NULL, dat
         dij_boot = BT[[2]]
         Boot.X <- sapply(1:nboot,function(b) c(x[1],rbinom(n = p_hat,size = x[1],prob = p_hat))) %>%
           split(., col(.))
-        ses <- FDtable_est(Boot.X,dij_boot,tau,q,datatype,nboot = 0)$Estoutput %>% 
+        ses <- FDtable_est(Boot.X,dij_boot,tau,q,datatype,nboot = 0) %>% 
           group_by(Community,Order.q) %>% 
           summarise(AUC_L = sum(Estimated[seq_along(Estimated[-1])]*diff(tau)),
                     AUC_R = sum(Estimated[-1]*diff(tau))) %>% ungroup %>% 
@@ -734,7 +735,7 @@ iNextFD = function(datalist, dij, q = c(0,1,2), datatype, tau, nboot, conf = 0.9
   }
   return(out)
 }
-AUCtable_iNextFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype, tau=NULL,
+AUCtable_iNextFD <- function(datalist, dij, q = c(0,1,2), datatype, tau=NULL,
                          nboot=0, conf=0.95, m) {
   qtile <- qnorm(1-(1-conf)/2)
   sites <- names(datalist)
@@ -744,7 +745,7 @@ AUCtable_iNextFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype,
   #   tau <- seq(dmin,dmax,length.out = knots)
   # }
   if(is.null(tau)){
-    tau <- seq(0,1,length.out = knots)
+    tau <- seq(0,1,length.out = 100)
   }
   AUC <- iNextFD(datalist,dij,q,datatype,tau,nboot = 0,m = m) %>%
     group_by(Community,Order.q,m) %>% 
@@ -945,11 +946,11 @@ invChatFD <- function(datalist, dij, q, datatype, level, nboot, conf = 0.95, tau
   rownames(out) <- NULL
   out
 }
-AUCtable_invFD <- function(datalist, dij, q = c(0,1,2), knots = 100, datatype, level, nboot = 0, conf = 0.95, tau=NULL){
+AUCtable_invFD <- function(datalist, dij, q = c(0,1,2), datatype, level, nboot = 0, conf = 0.95, tau=NULL){
   qtile <- qnorm(1-(1-conf)/2)
   sites <- names(datalist)
   if(is.null(tau)){
-    tau <- seq(0,1,length.out = knots)
+    tau <- seq(0,1,length.out = 100)
   }
   AUC <- invChatFD(datalist,dij,q,datatype,level,nboot = 0,tau = tau) %>%
     group_by(Community,Order.q,goalSC) %>% 
